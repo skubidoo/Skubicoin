@@ -1,5 +1,5 @@
 # Skubicoin - a cryptocurrency blockchain implementation
-
+![alt text](https://github.com/skubidoo/Skubicoin/blob/master/skubicoin.png)
 ### Key concepts of Skubicoin
 * HTTP interface to control the node
 * Use Websockets to communicate with other nodes (P2P)
