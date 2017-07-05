@@ -16,6 +16,10 @@ class Block {
         this.data = data;
         this.hash = hash.toString();
     }
+    SetOwnership(ownerAddress, ownerKeyHash){
+      this.ownerAddress = ownerAddress;
+      this.ownerKeyHash = ownerKeyHash;
+    }
 }
 
 var sockets = [];
@@ -25,23 +29,65 @@ var MessageType = {
     RESPONSE_BLOCKCHAIN: 2
 };
 
+var _activeMines = [];
+
 var getGenesisBlock = () => {
     return new Block(0, "0", 1465154705, "my genesis block!!", "816534932c2b7154836da6afc367695e6337db8a921823784c14378abed4f7d7");
 };
 
 var blockchain = [getGenesisBlock()];
-
+var keyVal = 0;
 var initHttpServer = () => {
     var app = express();
     app.use(bodyParser.json());
 
     app.get('/blocks', (req, res) => res.send(JSON.stringify(blockchain)));
     app.post('/mineBlock', (req, res) => {
+
+      //create a new problem to mine for
+      //let newMine = CryptoJS.SHA256(Math.floor(Math.random() * 100)).toString();
+      keyVal = Math.floor(Math.random() * 10000000);
+      let keyValStr=String(keyVal);
+      let newMine = CryptoJS.SHA256(keyValStr).toString();
+      console.log(newMine);
+
+      while(_activeMines[newMine]==keyVal)
+      {
+        keyVal = Math.floor(Math.random() * 10000000);
+        keyValStr=String(keyVal);
+        newMine = CryptoJS.SHA256(keyValStr).toString();
+      }
+
+      _activeMines[newMine]=keyVal;
+      res.send(newMine);
+      /*
         var newBlock = generateNextBlock(req.body.data);
         addBlock(newBlock);
         broadcast(responseLatestMsg());
         console.log('block added: ' + JSON.stringify(newBlock));
         res.send();
+        */
+    });
+    app.post('/verifyFoundCoin', (req, res) => {
+        let coin = Number(req.body.coin);
+        let hash = CryptoJS.SHA256(coin.toString()).toString();
+        //console.log('coin: ' + coin );
+        //console.log(CryptoJS.SHA256(coin).toString());
+        if(_activeMines[hash] == coin)
+        {
+          //Valid coin....add to blockchain
+          res.send('Valid Coin!');
+          var newBlock = generateNextBlock(req.body.coin);
+          newBlock.SetOwnership(req.body.ownerAddress, CryptoJS.SHA256(req.body.ownerKey).toString());
+          addBlock(newBlock);
+          broadcast(responseLatestMsg());
+          console.log('block added: ' + JSON.stringify(newBlock));
+          res.send();
+        }
+        else {
+          res.send('Invalid Coin! ' + req.body.coin);
+        }
+
     });
     app.get('/peers', (req, res) => {
         res.send(sockets.map(s => s._socket.remoteAddress + ':' + s._socket.remotePort));
